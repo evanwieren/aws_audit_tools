@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "aws-sdk": "^2.181.0",
+    "command-line-args": "^4.0.7",
+    "promise": "^8.0.1"
+  }
+}
