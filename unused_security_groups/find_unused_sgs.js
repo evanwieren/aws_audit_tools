@@ -7,7 +7,14 @@ const optionDefinitions = [
   { name: 'region', alias: 'r', type: String, multiple: false, defaultValue: 'us-east-1' }
 ]
 
-const options = commandLineArgs(optionDefinitions)
+let options = null
+try {
+  options = commandLineArgs(optionDefinitions);
+}
+catch (err) {
+  console.log(err.message);
+  process.exit();
+}
 
 let AWS = require('aws-sdk');
 
@@ -20,15 +27,25 @@ let params = {
   DryRun: false
 };
 
-let securitygroups = {};
+let my_securitygroups = {};
 function getSecurityGroupIds(item, index){
-  console.log(item);
-  securitygroups[item.GroupId] = 0;
+  if (item.GroupName != 'default'){
+    my_securitygroups[item.GroupId] = item;
+  }
 }
 
-function getSecurityGroupID(item, index) {
+function removeUnusedSecurityGroups(item, index) {
   let securitygroups = [item.Groups];
-  console.log(securitygroups)
+  if(securitygroups.length > 0){
+    if (securitygroups[0] != null){
+    // if(securitygroups[0].length > 0){
+      for( let i = 0; i < securitygroups[0].length; i++ )
+      {
+          // console.log(securitygroups[0][i]);
+          delete my_securitygroups[securitygroups[0][i].GroupId];
+      }
+    }
+  }
   return securitygroups;
 }
 
@@ -43,57 +60,27 @@ sgpromise.then(
   function(error) {
     console.log(err, err.stack); // an error occurred
   }
-) .then(function(){
+).then(function(){
   let request =  ec2.describeNetworkInterfaces(params);
 
   let promise  = request.promise();
   promise.then(
     function(data) {
       /* process the data */
-      console.log(securitygroups);
+      // console.log(securitygroups);
       myInterfaces = data.NetworkInterfaces;
-      // data.NetworkInterfaces.map(getSecurityGroupID)
-      console.log("Oh how did I get here");
+      data.NetworkInterfaces.map(removeUnusedSecurityGroups)
+      // console.log("Oh how did I get here");
     },
     function(error) {
       console.log(err, err.stack); // an error occurred
     }
   ).then(function(){
-    console.log("Last do this");
+    // console.log(my_securitygroups);
+    // console.log(Object.keys(my_securitygroups));
+    Object.keys(my_securitygroups).map((obj) => { 
+      console.log(obj, " ", my_securitygroups[obj].GroupName);
+    });
+    // .map(console.log()));
   });
-
 });
-
-
-
-
-
-// let request =  ec2.describeSecurityGroups(params, function(err, data){
-//     if(err) console.log(err, err.stack); // an error occurred
-//     console.log("Getting Security Groups")
-//   });
-
-// // create the promise object
-// let promise = request.promise();
-
-// let ENIs = promise.then(getNetworking, null)
-// let pages = 1;
-// ec2.describeNetworkInterfaces(params).eachPage( function(err, data){
-//     if (err) console.log(err, err.stack); // an error occurred
-//     else{
-//       console.log("Page", pages++);
-//       console.log("Size is", data.NetworkInterfaces.length );
-//       // console.log(data); 
-//       // data.NetworkInterfaces.map(getSecurityGroupID)
-
-//     }    
-// });
-
-// // call EC2 to retrieve policy for selected bucket
-// ec2.describeInstances(params, function(err, data) {
-//     if (err) {
-//       console.log("Error", err.stack);
-//     } else {
-//       console.log("Success", JSON.stringify(data));
-//     }
-//   });
