@@ -4,7 +4,8 @@ let Promise = require('promise');
 const optionDefinitions = [
   { name: 'verbose', alias: 'v', type: Boolean },
   { name: 'profile', alias: 'p', type: String, multiple: false, defaultValue: 'default' },
-  { name: 'region', alias: 'r', type: String, multiple: false, defaultValue: 'us-east-1' }
+  { name: 'region', alias: 'r', type: String, multiple: false, defaultValue: 'us-east-1' },
+  { name: 'delete', type: Boolean, defaultValue: false }
 ]
 
 let options = null
@@ -34,7 +35,7 @@ function getSecurityGroupIds(item, index){
   }
 }
 
-function removeUnusedSecurityGroups(item, index) {
+function removeUsedSecurityGroups(item, index) {
   let securitygroups = [item.Groups];
   if(securitygroups.length > 0){
     if (securitygroups[0] != null){
@@ -57,7 +58,7 @@ sgpromise.then(
     data.SecurityGroups.map(getSecurityGroupIds);
   
   },
-  function(error) {
+  function(err) {
     console.log(err, err.stack); // an error occurred
   }
 ).then(function(){
@@ -69,10 +70,10 @@ sgpromise.then(
       /* process the data */
       // console.log(securitygroups);
       myInterfaces = data.NetworkInterfaces;
-      data.NetworkInterfaces.map(removeUnusedSecurityGroups)
+      data.NetworkInterfaces.map(removeUsedSecurityGroups)
       // console.log("Oh how did I get here");
     },
-    function(error) {
+    function(err) {
       console.log(err, err.stack); // an error occurred
     }
   ).then(function(){
@@ -80,7 +81,19 @@ sgpromise.then(
     // console.log(Object.keys(my_securitygroups));
     Object.keys(my_securitygroups).map((obj) => { 
       console.log(obj, " ", my_securitygroups[obj].GroupName);
+      let params = {
+        DryRun: false,
+        GroupId: obj
+      };
+      if (options.delete){ 
+        console.log ("Deleting security group", obj);
+        ec2.deleteSecurityGroup(params, function(err,data){
+          if (err) console.log(err, err.stack); // an error occurred
+          else {
+            console.log("Deleted Security Group", obj);
+          }
+        })
+      }
     });
-    // .map(console.log()));
   });
 });
