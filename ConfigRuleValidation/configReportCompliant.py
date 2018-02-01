@@ -90,7 +90,7 @@ def lambda_handler(event, context):
                 NextToken=''
         )
         count = 0
-        while compliance.get("NextToken", None) is not None:
+        while True:
             # logger.debug(count);
             for evalItemIdentifier in compliance['EvaluationResults']:
                 count = count + 1
@@ -98,15 +98,18 @@ def lambda_handler(event, context):
                 logger.debug("Type: %s ID: %s" % (evalItem['ResourceType'], evalItem['ResourceId']));
                 print("%d:\tType: %s\tID: %s" % (count,evalItem['ResourceType'], evalItem['ResourceId']))
 
-            compliance = client.get_compliance_details_by_config_rule(
-                ConfigRuleName=CONFIG_RULE,
-                ComplianceTypes=[
-                    'COMPLIANT',
-                    # 'NOT_APPLICABLE',
-                ],
-                Limit=10,
-                NextToken=compliance.get("NextToken")
-            )
+            if compliance.get("NextToken", None) is None:
+                break
+            else:
+                compliance = client.get_compliance_details_by_config_rule(
+                    ConfigRuleName=CONFIG_RULE,
+                    ComplianceTypes=[
+                        'COMPLIANT',
+                        # 'NOT_APPLICABLE',
+                    ],
+                    Limit=10,
+                    NextToken=compliance.get("NextToken")
+                )
     except SystemExit:
         logger.error("Exiting")
         sys.exit(1)
